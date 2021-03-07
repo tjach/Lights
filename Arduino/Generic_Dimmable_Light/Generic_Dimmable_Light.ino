@@ -6,7 +6,7 @@
 #include <WiFiManager.h>
 #include <EEPROM.h>
 
-#define light_name "Dimmable Hue Light"  //default light name
+#define light_name "Lampki TV"  //default light name
 
 #define use_hardware_switch false // To control on/off state and brightness using GPIO/Pushbutton, set this value to true.
 //For GPIO based on/off and brightness control, it is mandatory to connect the following GPIO pins to ground using 10k resistor
@@ -14,15 +14,9 @@
 #define button2_pin 5 // off and brightness down
 
 //define pins
-#define LIGHTS_COUNT 4
-uint8_t pins[LIGHTS_COUNT] = {12, 15, 13, 14};
-
-//#define USE_STATIC_IP //! uncomment to enable Static IP Adress
-#ifdef USE_STATIC_IP
-IPAddress strip_ip ( 192,  168,   0,  95); // choose an unique IP Adress
-IPAddress gateway_ip ( 192,  168,   0,   1); // Router IP
-IPAddress subnet_mask(255, 255, 255,   0);
-#endif
+#define LIGHTS_COUNT 3
+//uint8_t pins[LIGHTS_COUNT] = {12, 13, 14};
+uint8_t pins[LIGHTS_COUNT] = {0, 4, 5};
 
 uint8_t scene;
 bool light_state[LIGHTS_COUNT], in_transition;
@@ -45,6 +39,12 @@ void handleNotFound() {
     message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
   }
   server.send(404, "text/plain", message);
+}
+
+void resetToFactoryDefaults() {
+  WiFi.disconnect();
+  delay(3000);
+  ESP.reset();
 }
 
 
@@ -142,10 +142,6 @@ void lightEngine() {
 
 void setup() {
   EEPROM.begin(512);
-  
-#ifdef USE_STATIC_IP
-  WiFi.config(strip_ip, gateway_ip, subnet_mask);
-#endif
 
   for (uint8_t light = 0; light < LIGHTS_COUNT; light++) {
     apply_scene(EEPROM.read(2), light);
@@ -172,17 +168,6 @@ void setup() {
   }
 
   WiFi.macAddress(mac);
-
-  // Port defaults to 8266
-  // ArduinoOTA.setPort(8266);
-
-  // Hostname defaults to esp8266-[ChipID]
-  // ArduinoOTA.setHostname("myesp8266");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword((const char *)"123");
-
-  ArduinoOTA.begin();
 
   pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
   digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
@@ -345,10 +330,9 @@ void setup() {
       }
     }
     if (server.hasArg("reset")) {
-      ESP.reset();
+      resetToFactoryDefaults();
     }
-
-
+    
     String http_content = "<!doctype html>";
     http_content += "<html>";
     http_content += "<head>";
@@ -413,7 +397,6 @@ void setup() {
 }
 
 void loop() {
-  ArduinoOTA.handle();
   server.handleClient();
   lightEngine();
 }
